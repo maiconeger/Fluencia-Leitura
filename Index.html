@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leitor de Fluência - Tela Interativa</title>
+  <!-- Mammoth JS para leitura de arquivos .docx direto no navegador -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #0f172a; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    .container { width: 100%; max-width: 950px; display: flex; flex-direction: column; gap: 20px; }
+    
+    /* Header & Bar de Progresso */
+    .top-info { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 12px 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
+    .progress-text { font-size: 1.1rem; font-weight: 600; color: #475569; }
+    
+    /* Display principal */
+    #display-box { background: #ffffff; border: 3px solid #cbd5e1; border-radius: 16px; height: 280px; display: flex; justify-content: center; align-items: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); position: relative; overflow: hidden; }
+    #display { font-size: 4.5rem; font-weight: 800; color: #2563eb; text-align: center; padding: 0 25px; word-break: break-word; transition: font-size 0.1s ease; }
+    
+    /* Controles de Leitura */
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; }
+    button { font-size: 1.1rem; font-weight: 600; padding: 12px 18px; border-radius: 10px; border: none; cursor: pointer; transition: all 0.2s ease; color: white; display: inline-flex; align-items: center; gap: 6px; }
+    button:active { transform: scale(0.97); }
+    .btn-primary { background: #2563eb; } .btn-primary:hover { background: #1d4ed8; }
+    .btn-secondary { background: #64748b; } .btn-secondary:hover { background: #475569; }
+    .btn-danger { background: #ef4444; } .btn-danger:hover { background: #dc2626; }
+    .btn-outline { background: #e2e8f0; color: #334155; } .btn-outline:hover { background: #cbd5e1; }
+    
+    /* Configurações e Entrada de Arquivos/Texto */
+    .config-box { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 16px; }
+    
+    .source-selection { display: flex; gap: 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; flex-wrap: wrap; }
+    .source-tab { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 14px; font-weight: 600; cursor: pointer; }
+    .source-tab.active { background: #2563eb; color: white; border-color: #2563eb; }
+
+    .input-section { display: none; flex-direction: column; gap: 10px; }
+    .input-section.active { display: flex; }
+
+    textarea { width: 100%; height: 110px; padding: 12px; font-size: 1.1rem; border: 1px solid #cbd5e1; border-radius: 8px; resize: vertical; font-family: inherit; }
+    
+    .file-input-wrapper { display: flex; flex-direction: column; gap: 8px; background: #f8fafc; padding: 16px; border: 2px dashed #cbd5e1; border-radius: 10px; text-align: center; }
+    .file-input-wrapper input[type="file"] { display: none; }
+    .file-label { display: inline-block; padding: 10px 20px; background: #0284c7; color: white; border-radius: 8px; font-weight: 600; cursor: pointer; width: fit-content; margin: 0 auto; }
+    
+    .gdoc-wrapper { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .gdoc-wrapper input[type="url"] { flex: 1; min-width: 250px; padding: 10px; font-size: 1rem; border: 1px solid #cbd5e1; border-radius: 8px; }
+
+    .options { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; border-top: 1px solid #f1f5f9; padding-top: 14px; }
+    label { font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 8px; color: #334155; }
+    input[type="number"], select { padding: 8px 12px; font-size: 1rem; border-radius: 6px; border: 1px solid #cbd5e1; }
+    
+    .font-controls { display: flex; align-items: center; gap: 6px; }
+    
+    .status-msg { font-size: 0.95rem; font-weight: 500; color: #0284c7; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Informações Superiores & Progresso -->
+  <div class="top-info">
+    <div class="progress-text" id="progresso">Palavra: 0 / 0</div>
+    <div class="font-controls">
+      <span style="font-weight: 600; color: #475569; margin-right: 6px;">Tamanho da Fonte:</span>
+      <button class="btn-outline" onclick="alterarFonte(-0.5)" title="Diminuir fonte">A-</button>
+      <button class="btn-outline" onclick="alterarFonte(0.5)" title="Aumentar fonte">A+</button>
+    </div>
+  </div>
+
+  <!-- Caixa do Exibidor -->
+  <div id="display-box">
+    <div id="display">Pronto para começar</div>
+  </div>
+
+  <!-- Botões de Controle -->
+  <div class="controls">
+    <button class="btn-secondary" onclick="voltarPalavra()">⏮ Voltar</button>
+    <button class="btn-primary" onclick="iniciarLeitura()">▶ Iniciar</button>
+    <button class="btn-secondary" onclick="pausarLeitura()">⏸ Pausar</button>
+    <button class="btn-secondary" onclick="avancarPalavra()">Avançar ⏭</button>
+    <button class="btn-danger" onclick="reiniciarLeitura()">🔄 Reiniciar</button>
+  </div>
+
+  <!-- Entrada de Texto, Arquivo e Opções -->
+  <div class="config-box">
+    <div class="source-selection">
+      <div class="source-tab active" onclick="selecionarAba('digitar')">✏️ Digitar / Colar Texto</div>
+      <div class="source-tab" onclick="selecionarAba('arquivo')">📁 Carregar Arquivo (.txt / .docx)</div>
+      <div class="source-tab" onclick="selecionarAba('gdoc')">🔗 Link Google Doc</div>
+    </div>
+
+    <!-- Opção 1: Digitar/Colar -->
+    <div id="tab-digitar" class="input-section active">
+      <label for="textoInput">Texto para Leitura:</label>
+      <textarea id="textoInput" oninput="carregarTexto()" placeholder="Digite ou cole seu texto aqui...">O sapato de Gustavo ficou preso na cerca de madeira do jardim.</textarea>
+    </div>
+
+    <!-- Opção 2: Carregar Arquivo TXT / DOCX -->
+    <div id="tab-arquivo" class="input-section">
+      <div class="file-input-wrapper">
+        <p style="margin: 0; color: #475569; font-weight: 500;">Selecione um arquivo de texto (.txt) ou Word (.docx) do seu computador:</p>
+        <label for="fileUpload" class="file-label">📄 Escolher Arquivo</label>
+        <input type="file" id="fileUpload" accept=".txt,.docx" onchange="processarArquivo(this)">
+        <span id="file-status" class="status-msg">Nenhum arquivo selecionado</span>
+      </div>
+    </div>
+
+    <!-- Opção 3: Importar Google Doc -->
+    <div id="tab-gdoc" class="input-section">
+      <label>Carregar Google Doc (Certifique-se que o link está como "Qualquer pessoa com o link"):</label>
+      <div class="gdoc-wrapper">
+        <input type="url" id="gdocUrl" placeholder="https://docs.google.com/document/d/.../edit">
+        <button class="btn-primary" onclick="importarGoogleDoc()">Importar Texto</button>
+      </div>
+      <span id="gdoc-status" class="status-msg"></span>
+    </div>
+
+    <!-- Opções de Velocidade e Modo -->
+    <div class="options">
+      <label>
+        Tempo por item (segundos):
+        <input type="number" id="tempo" value="1.5" min="0.2" step="0.1" style="width: 80px;">
+      </label>
+      <label>
+        Modo de Exibição:
+        <select id="modoDivisao" onchange="carregarTexto()">
+          <option value="palavra">Palavra por Palavra</option>
+          <option value="frase">Por Frases / Pontuação</option>
+        </select>
+      </label>
+    </div>
+  </div>
+</div>
+
+<script>
+  let lista = [];
+  let indice = 0;
+  let intervalo = null;
+  let tamanhoFonteAtual = 4.5; // rem
+
+  function alterarFonte(delta) {
+    tamanhoFonteAtual = Math.max(2, Math.min(8, tamanhoFonteAtual + delta));
+    document.getElementById('display').style.fontSize = tamanhoFonteAtual + 'rem';
+  }
+
+  function selecionarAba(aba) {
+    document.querySelectorAll('.source-tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.input-section').forEach(sec => sec.classList.remove('active'));
+
+    if (aba === 'digitar') {
+      document.querySelectorAll('.source-tab')[0].classList.add('active');
+      document.getElementById('tab-digitar').classList.add('active');
+    } else if (aba === 'arquivo') {
+      document.querySelectorAll('.source-tab')[1].classList.add('active');
+      document.getElementById('tab-arquivo').classList.add('active');
+    } else if (aba === 'gdoc') {
+      document.querySelectorAll('.source-tab')[2].classList.add('active');
+      document.getElementById('tab-gdoc').classList.add('active');
+    }
+  }
+
+  function carregarTexto() {
+    const rawText = document.getElementById('textoInput').value.trim();
+    const modo = document.getElementById('modoDivisao').value;
+    
+    if (!rawText) {
+      lista = [];
+      atualizarProgresso();
+      return;
+    }
+
+    if (modo === "palavra") {
+      lista = rawText.split(/\s+/).filter(item => item.length > 0);
+    } else {
+      lista = rawText.split(/(?<=[.,!?;])\s+/).filter(item => item.trim().length > 0);
+    }
+    atualizarProgresso();
+  }
+
+  function atualizarProgresso() {
+    const progressoEl = document.getElementById('progresso');
+    if (lista.length === 0) {
+      progressoEl.innerText = "Palavra: 0 / 0";
+    } else {
+      progressoEl.innerText = `Item: ${Math.min(indice + 1, lista.length)} / ${lista.length}`;
+    }
+  }
+
+  function atualizarDisplay() {
+    const display = document.getElementById('display');
+    if (lista.length === 0) {
+      display.innerText = "Sem texto para ler";
+      return;
+    }
+
+    if (indice < lista.length) {
+      display.innerText = lista[indice];
+    } else {
+      display.innerText = "Fim do exercício! 🎉";
+      pausarLeitura();
+    }
+    atualizarProgresso();
+  }
+
+  function iniciarLeitura() {
+    carregarTexto();
+    if (lista.length === 0) {
+      alert("Por favor, digite ou carregue um texto antes de iniciar.");
+      return;
+    }
+
+    if (intervalo) clearInterval(intervalo);
+    
+    const ms = parseFloat(document.getElementById('tempo').value) * 1000;
+    
+    atualizarDisplay();
+    intervalo = setInterval(() => {
+      if (indice < lista.length - 1) {
+        indice++;
+        atualizarDisplay();
+      } else {
+        indice = lista.length;
+        atualizarDisplay();
+      }
+    }, ms);
+  }
+
+  function pausarLeitura() {
+    if (intervalo) clearInterval(intervalo);
+    intervalo = null;
+  }
+
+  function reiniciarLeitura() {
+    pausarLeitura();
+    indice = 0;
+    carregarTexto();
+    if (lista.length > 0) {
+      atualizarDisplay();
+    } else {
+      document.getElementById('display').innerText = "Pronto para começar";
+    }
+  }
+
+  function voltarPalavra() {
+    pausarLeitura();
+    carregarTexto();
+    if (indice > 0) {
+      indice--;
+      atualizarDisplay();
+    }
+  }
+
+  function avancarPalavra() {
+    pausarLeitura();
+    carregarTexto();
+    if (indice < lista.length - 1) {
+      indice++;
+      atualizarDisplay();
+    }
+  }
+
+  /* Processamento de arquivos locais (.txt e .docx) */
+  function processarArquivo(input) {
+    const file = input.files[0];
+    const statusEl = document.getElementById('file-status');
+    if (!file) return;
+
+    statusEl.innerText = `Carregando: ${file.name}...`;
+
+    const fileName = file.name.toLowerCase();
+
+    if (fileName.endsWith('.txt')) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('textoInput').value = e.target.result;
+        statusEl.innerText = `✓ Arquivo TXT carregado: ${file.name}`;
+        selecionarAba('digitar');
+        reiniciarLeitura();
+      };
+      reader.readAsText(file);
+    } else if (fileName.endsWith('.docx')) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const arrayBuffer = e.target.result;
+        mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+          .then(function(result) {
+            document.getElementById('textoInput').value = result.value;
+            statusEl.innerText = `✓ Arquivo DOCX carregado: ${file.name}`;
+            selecionarAba('digitar');
+            reiniciarLeitura();
+          })
+          .catch(function(err) {
+            statusEl.innerText = "Erro ao ler arquivo .docx";
+            console.error(err);
+          });
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      statusEl.innerText = "Formato não suportado. Use .txt ou .docx";
+    }
+  }
+
+  /* Importação de Google Docs via export de texto */
+  function importarGoogleDoc() {
+    const url = document.getElementById('gdocUrl').value.trim();
+    const statusEl = document.getElementById('gdoc-status');
+
+    if (!url) {
+      statusEl.innerText = "Cole o link do Google Doc acima.";
+      return;
+    }
+
+    const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (!match) {
+      statusEl.innerText = "URL do Google Doc inválida. Certifique-se de usar a URL completa.";
+      return;
+    }
+
+    const docId = match[1];
+    const exportUrl = `https://docs.google.com/document/d/${docId}/export?format=txt`;
+
+    statusEl.innerText = "Buscando conteúdo do Google Doc...";
+
+    fetch(exportUrl)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error("Não foi possível acessar.");
+        }
+        return response.text();
+      })
+      .then(text => {
+        document.getElementById('textoInput').value = text;
+        statusEl.innerText = "✓ Texto do Google Doc importado com sucesso!";
+        selecionarAba('digitar');
+        reiniciarLeitura();
+      })
+      .catch(err => {
+        statusEl.innerText = "Erro ao carregar Google Doc. Verifique se o link está compartilhado como 'Qualquer pessoa com o link'.";
+        console.error(err);
+      });
+  }
+
+  // Inicializa a lista com o texto padrão
+  carregarTexto();
+</script>
+
+</body>
+</html>
