@@ -8,8 +8,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <style>
     * { box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #0f172a; display: flex; flex-direction: column; align-items: center; min-height: 100vh; justify-content: space-between; }
-    .container { width: 100%; max-width: 950px; display: flex; flex-direction: column; gap: 20px; flex: 1; }
+    body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #0f172a; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    .container { width: 100%; max-width: 950px; display: flex; flex-direction: column; gap: 20px; }
     
     /* Header & Bar de Progresso */
     .top-info { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 12px 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
@@ -54,9 +54,6 @@
     .font-controls { display: flex; align-items: center; gap: 6px; }
     
     .status-msg { font-size: 0.95rem; font-weight: 500; color: #0284c7; }
-
-    /* Rodapé */
-    footer { margin-top: 25px; padding: 12px 0; text-align: center; color: #64748b; font-size: 0.95rem; font-weight: 600; border-top: 1px solid #e2e8f0; width: 100%; max-width: 950px; }
   </style>
 </head>
 <body>
@@ -136,11 +133,6 @@
     </div>
   </div>
 </div>
-
-<!-- Rodapé -->
-<footer>
-  Powered by Prof. Maicon Eger - Instrutor de Informática
-</footer>
 
 <script>
   let lista = [];
